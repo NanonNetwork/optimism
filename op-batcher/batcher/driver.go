@@ -550,7 +550,13 @@ func (l *BatchSubmitter) calldataTxCandidate(data []byte) *txmgr.TxCandidate {
 		l.Log.Info("celestia: blob successfully submitted", "id", hex.EncodeToString(ids[0]))
 		data = append([]byte{celestia.DerivationVersionCelestia}, ids[0]...)
 	} else {
-		l.Log.Info("celestia: blob submission failed; falling back to eth", "err", err)
+		// eth fallback: try using blobdata otherwise use calldata
+		if candidate, err := l.blobTxCandidate(singleFrameTxData(frameData{data: data})); err != nil {
+			l.Log.Info("celestia: blob submission failed; falling back to eth calldata", "err", err)
+		} else {
+			l.Log.Info("celestia: blob submission failed; falling back to eth blobdata", "err", err)
+			return candidate
+		}
 	}
 	return &txmgr.TxCandidate{
 		To:     &l.RollupConfig.BatchInboxAddress,
